@@ -5,7 +5,7 @@
 
 clc; clear;
 %Load CSI File
-fileName = 's1_18BPM.csv'; %Path/Name of the CSI csv file to be loaded
+fileName = './Datasets/s1_18BPM.csv'; %Path/Name of the CSI csv file to be loaded
 csiFile = load(fileName); 
 
 %Separate CSI amplitudes and phase in two different numeric matrices
@@ -13,7 +13,7 @@ csiAmps = csiFile(:,2:91); %Column 1 is the timestamp
 csiPhases = csiFile(:,92:181); 
 
 %Load CSI File with Breathing Ground-Truth
-groundTruthFileName = '18BPMGroundTruth.mat';
+groundTruthFileName = './Datasets/18BPMGroundTruth.mat';
 RealBR = load(groundTruthFileName);
 RealBR = RealBR.BREstimation;
 
@@ -41,6 +41,7 @@ CD3Mean = zeros(dur,sc);
 CD4Mean = zeros(dur,sc);
 ApproxMean = zeros(dur,sc); %Mean of Approximation Coefficients of each sc
 MeanSC = zeros(dur,sc);  %Time domain Mean 
+MedianSC = zeros(dur,sc); %Time domain Median
 VarSC = zeros(dur,sc);  %Time domain Variance
 SkwSC = zeros(dur,sc);  %Time domain Skewness
 KurtSC = zeros(dur,sc);     %Time domain Kurtosis
@@ -165,6 +166,8 @@ for i = 1:fs:numData - (numData - (dur*fs))
         RMSSC(atributesIndex,:) = sqrt(SSISC(atributesIndex,:)./rows);
         %Mean of each calibrated signal
         MeanSC(atributesIndex,:) = mean(calibratedNorm);
+        %Median of each calibrated signal
+        MedianSC(atributesIndex,:) = median(calibratedNorm); 
         %Variance of each calibrated signal
         VarSC(atributesIndex,:) = var(calibratedNorm); 
         %Skewness of each calibrated signal
@@ -283,6 +286,15 @@ for i = cC+1:cC+c
     headers(i) = strcat('MeanSC',sprintf("%d",index));
 end
 [~,cC] = size(headers);
+[~,c] = size(MedianSC); 
+for i = cC+1:cC+c 
+    index = mod(i,c); 
+    if index == 0
+        index = c; 
+    end
+    headers(i) = strcat('MedianSC',sprintf("%d",index));
+end
+[~,cC] = size(headers);
 [~,c] = size(MAVSC); 
 for i = cC+1:cC+c 
     index = mod(i,c); 
@@ -373,6 +385,6 @@ for i = cC+1:cC+c
     headers(i) = strcat('Label',sprintf("%d",index));
 end
 dataset =[CD1Var CD2Var CD3Var CD4Var CD1Mean CD2Mean CD3Mean CD4Mean ...
-    ApproxMean ApproxVar MeanSC MAVSC SSISC RMSSC VarSC KurtSC SkwSC ...
+    ApproxMean ApproxVar MeanSC MedianSC MAVSC SSISC RMSSC VarSC KurtSC SkwSC ...
     MaxFreq SpectrumSTD BREstimation RealBR];
 dataset = [headers;dataset];

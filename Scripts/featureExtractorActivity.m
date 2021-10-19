@@ -7,7 +7,7 @@ clc; clear;
 
 clc; clear;
 %Load CSI File
-fileName = '*****.csv'; %Path/Name of the CSI csv file to be loaded
+fileName = './Datasets/BE.csv'; %Path/Name of the CSI csv file to be loaded
 csiFile = load(fileName); 
 
 %Separate CSI amplitudes and phase in two different numeric matrices
@@ -32,6 +32,7 @@ CD3Mean = zeros(1,sc);
 CD4Mean = zeros(1,sc);
 ApproxMean = zeros(1,sc); %Mean of Approximation Coefficients of each sc
 MeanSC = zeros(1,sc);  %Time domain Mean 
+MedianSC = zeros(1,sc); %Time domain Median 
 VarSC = zeros(1,sc);  %Time domain Variance
 SkwSC = zeros(1,sc);  %Time domain Skewness
 KurtSC = zeros(1,sc);     %Time domain Kurtosis
@@ -48,9 +49,9 @@ SpectrumSTD = zeros(1,sc); %Standard Deviation of Power Spectrum of each sc
 [csiHampel,hampelIndex] = hampel(csiAmps,round(rows/5),2); 
 %SG Filter
 smoothCSI = csiHampel; 
-smoothCSI = sgolayfilt(smoothCSI,11,51); 
+smoothCSI = sgolayfilt(smoothCSI,3,101); 
 %Subcarrier Selection
-[dataCalibrated,indexes] = subcarrierSelection(dataCalibrated,sc);
+[dataCalibrated,indexes] = subcarrierSelection(smoothCSI,sc);
 
 %DWT for obtaining detailed and approx coefficients
 smoothSensitive = smoothCSI(:,indexes);  
@@ -65,16 +66,16 @@ for currentsc=1:sc
     cd4Norm = normalize(cd4,'range',[0 1]);
     approxNorm = normalize(approx,'range',[0 1]); 
     %DWT Feature Extraction
-    CD1Var(atributesIndex,currentsc) = std(cd1Norm);          
-    CD2Var(atributesIndex,currentsc) = std(cd2Norm);           
-    CD3Var(atributesIndex,currentsc) = std(cd3Norm);           
-    CD4Var(atributesIndex,currentsc) = std(cd4Norm);            
-    CD1Mean(atributesIndex,currentsc) = mean(cd1Norm);          
-    CD2Mean(atributesIndex,currentsc) = mean(cd2Norm);           
-    CD3Mean(atributesIndex,currentsc) = mean(cd3Norm);           
-    CD4Mean(atributesIndex,currentsc) = mean(cd4Norm);  
-    ApproxVar(atributesIndex,currentsc) = var(approxNorm);
-    ApproxMean(atributesIndex,currentsc) = mean(approxNorm);
+    CD1Var(1,currentsc) = std(cd1Norm);          
+    CD2Var(1,currentsc) = std(cd2Norm);           
+    CD3Var(1,currentsc) = std(cd3Norm);           
+    CD4Var(1,currentsc) = std(cd4Norm);            
+    CD1Mean(1,currentsc) = mean(cd1Norm);          
+    CD2Mean(1,currentsc) = mean(cd2Norm);           
+    CD3Mean(1,currentsc) = mean(cd3Norm);           
+    CD4Mean(1,currentsc) = mean(cd4Norm);  
+    ApproxVar(1,currentsc) = var(approxNorm);
+    ApproxMean(1,currentsc) = mean(approxNorm);
 end
 
 %Obtain Frequency Domain of sensitive calibrated subcarriers
@@ -96,9 +97,11 @@ MAVSC(1,:) = mean(abs(dataCalibrated));
 %SIMPLE SIGN INTEGRAL
 SSISC(1,:) = sum(abs(dataCalibrated).^2);
 %ROOT MEAN SQUARE
-RMSSC(1,:) = sqrt(SSISC(atributesIndex,:)./rows);
+RMSSC(1,:) = sqrt(SSISC(1,:)./rows);
 %Mean of each calibrated signal
 MeanSC(1,:) = mean(calibratedNorm);
+%Median of each calibrated signal
+MedianSC(1,:) = median(calibratedNorm); 
 %Variance of each calibrated signal
 VarSC(1,:) = var(calibratedNorm); 
 %Skewness of each calibrated signal
@@ -211,6 +214,15 @@ for i = cC+1:cC+c
     headers(i) = strcat('MeanSC',sprintf("%d",index));
 end
 [~,cC] = size(headers);
+[~,c] = size(MedianSC); 
+for i = cC+1:cC+c 
+    index = mod(i,c); 
+    if index == 0
+        index = c; 
+    end
+    headers(i) = strcat('MedianSC',sprintf("%d",index));
+end
+[~,cC] = size(headers);
 [~,c] = size(MAVSC); 
 for i = cC+1:cC+c 
     index = mod(i,c); 
@@ -283,7 +295,7 @@ for i = cC+1:cC+c
     headers(i) = strcat('STDPSDSC',sprintf("%d",index));
 end
 [~,cC] = size(headers);
-[~,c] = size(RealBR);
+[~,c] = size(label);
 for i = cC+1:cC+c 
     index = mod(i,c); 
     if index == 0
@@ -292,6 +304,6 @@ for i = cC+1:cC+c
     headers(i) = strcat('Label',sprintf("%d",index));
 end
 dataset =[CD1Var CD2Var CD3Var CD4Var CD1Mean CD2Mean CD3Mean CD4Mean ...
-    ApproxMean ApproxVar MeanSC MAVSC SSISC RMSSC VarSC KurtSC SkwSC ...
+    ApproxMean ApproxVar MeanSC MedianSC MAVSC SSISC RMSSC VarSC KurtSC SkwSC ...
     MaxFreq SpectrumSTD label];
 dataset = [headers;dataset];
