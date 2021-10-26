@@ -5,7 +5,7 @@
 
 clc; clear;
 %Load CSI File
-fileName = './Datasets/s1_18BPM.csv'; %Path/Name of the CSI csv file to be loaded
+fileName = './Datasets/s5/Breathing/s5_21BPM_C.csv'; %Path/Name of the CSI csv file to be loaded
 csiFile = load(fileName); 
 
 %Separate CSI amplitudes and phase in two different numeric matrices
@@ -13,12 +13,12 @@ csiAmps = csiFile(:,2:91); %Column 1 is the timestamp
 csiPhases = csiFile(:,92:181); 
 
 %Load CSI File with Breathing Ground-Truth
-groundTruthFileName = './Datasets/18BPMGroundTruth.mat';
+groundTruthFileName = './Datasets/s5/Breathing/21BPMGroundTruth.mat';
 RealBR = load(groundTruthFileName);
 RealBR = RealBR.BREstimation;
 
 %For Breathing Feature Extractor, only CSI amplitudes are used
-fs = 25; %Sample frequency in Hz
+fs = 50; %Sample frequency in Hz
 t = 40; %Length of time window in seconds
 sc = 10; %Number of sensitive subcarriers to be used for feature extraction
 %Breathing Estimation feature is averaged with the last 3 breathing

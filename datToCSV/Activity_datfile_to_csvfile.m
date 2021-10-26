@@ -8,7 +8,7 @@ clear;
 PathName='';
 
 %FileName=dir(strcat(PathName,'*.dat'));
-FileName(1).name='BE_210321_0323_00.dat'; %dat File to convert to CSI
+FileName(1).name='./s5/s5WU10.dat'; %dat File to convert to CSI
 fprintf('Processing %d files\n',length(FileName));
 for i = 1:length(FileName)
     csi_trace = read_bf_file(strcat(PathName,FileName(i).name));

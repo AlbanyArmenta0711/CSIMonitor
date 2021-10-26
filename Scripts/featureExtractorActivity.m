@@ -7,55 +7,74 @@ clc; clear;
 
 clc; clear;
 %Load CSI File
-fileName = './Datasets/BE.csv'; %Path/Name of the CSI csv file to be loaded
+fileName = './Datasets/s5/Activity/s5WU10.csv'; %Path/Name of the CSI csv file to be loaded
 csiFile = load(fileName); 
 
 %Separate CSI amplitudes and phase in two different numeric matrices
 csiAmps = csiFile(:,2:91); %Column 1 is the timestamp
+%csiAmps(:,4) = [];
+%csiAmps(:,63) = [];
+
 csiPhases = csiFile(:,92:181); 
 
-fs = 25; %Sample frequency in Hz
-t = 40; %Length of time window in seconds
+fs = 50; %Sample frequency in Hz
 sc = 10; %Number of sensitive subcarriers to be used for feature extraction
 %Real Label
-label = 1; 
+%1 = FALL
+%2 = LIE DOWN
+%3 = WAKE UP
+label =3; 
 
 %Define feature vectors/matrices
-CD1Var = zeros(1,sc); %Variance of Detailed Coefficients of each sc
-CD2Var = zeros(1,sc);
-CD3Var = zeros(1,sc);
-CD4Var = zeros(1,sc);
-ApproxVar = zeros(1,sc); %Variance of Approximation Coefficients of each sc
-CD1Mean = zeros(1,sc);
-CD2Mean = zeros(1,sc);
-CD3Mean = zeros(1,sc);
-CD4Mean = zeros(1,sc);
-ApproxMean = zeros(1,sc); %Mean of Approximation Coefficients of each sc
-MeanSC = zeros(1,sc);  %Time domain Mean 
-MedianSC = zeros(1,sc); %Time domain Median 
-VarSC = zeros(1,sc);  %Time domain Variance
-SkwSC = zeros(1,sc);  %Time domain Skewness
-KurtSC = zeros(1,sc);     %Time domain Kurtosis
-MAVSC = zeros(1,sc); %Time domain MEAN ABSOLUTE VALUE
-SSISC = zeros(1,sc); %Time domain SIMPLE SIGN INTEGRAL
-RMSSC = zeros(1,sc); %Time domain ROOT MEAN SQUARE
-BREstimation = zeros(1,1); %First Breathing Rate Estimation
-MaxFreq = zeros(1,sc); %Max Frequency of Power Spectrum of each sc
-SpectrumSTD = zeros(1,sc); %Standard Deviation of Power Spectrum of each sc
+CD1Var = zeros(1,3*sc); %Variance of Detailed Coefficients of each sc
+CD2Var = zeros(1,3*sc);
+CD3Var = zeros(1,3*sc);
+CD4Var = zeros(1,3*sc);
+ApproxVar = zeros(1,3*sc); %Variance of Approximation Coefficients of each sc
+CD1Mean = zeros(1,3*sc);
+CD2Mean = zeros(1,3*sc);
+CD3Mean = zeros(1,3*sc);
+CD4Mean = zeros(1,3*sc);
+ApproxMean = zeros(1,3*sc); %Mean of Approximation Coefficients of each sc
+MeanSC = zeros(1,3*sc);  %Time domain Mean 
+MedianSC = zeros(1,3*sc); %Time domain Median 
+VarSC = zeros(1,3*sc);  %Time domain Variance
+SkwSC = zeros(1,3*sc);  %Time domain Skewness
+KurtSC = zeros(1,3*sc);     %Time domain Kurtosis
+MAVSC = zeros(1,3*sc); %Time domain MEAN ABSOLUTE VALUE
+SSISC = zeros(1,3*sc); %Time domain SIMPLE SIGN INTEGRAL
+RMSSC = zeros(1,3*sc); %Time domain ROOT MEAN SQUARE
+MaxFreq = zeros(1,3*sc); %Max Frequency of Power Spectrum of each sc
+SpectrumSTD = zeros(1,3*sc); %Standard Deviation of Power Spectrum of each sc
 
 %Only CSI amplitudes will be used
 [rows,cols] = size(csiAmps); 
-%Hampel Identifier application
-[csiHampel,hampelIndex] = hampel(csiAmps,round(rows/5),2); 
-%SG Filter
-smoothCSI = csiHampel; 
-smoothCSI = sgolayfilt(smoothCSI,3,101); 
-%Subcarrier Selection
-[dataCalibrated,indexes] = subcarrierSelection(smoothCSI,sc);
+csiAmps = detrend(csiAmps);
 
+%Hampel Identifier application
+%[csiHampel,hampelIndex] = hampel(csiAmps,round(rows/5),2); 
+%SG Filter
+%smoothCSI = csiAmps; 
+%smoothCSI = sgolayfilt(smoothCSI,5,51); 
+%Design bandpass filter
+ filterOrder = 8; 
+ filter = designfilt('lowpassiir','FilterOrder',filterOrder, ...
+     'PassbandFrequency',5,'PassbandRipple',0.2,  ...
+     'SampleRate',fs);
+ [b,a] = sos2tf(filter.Coefficients);
+ smoothCSI = filtfilt(b,a,csiAmps); 
+
+dataCalibrated = zeros(rows,3*sc);
+indexes = zeros(1,3*sc);
+%Subcarrier Selection (10 from each antenna) 
+[dataCalibrated(:,1:10),indexes(:,1:10)] = subcarrierSelection(smoothCSI(:,1:10),sc);
+[dataCalibrated(:,11:20),indexes(:,11:20)] = subcarrierSelection(smoothCSI(:,11:20),sc);
+[dataCalibrated(:,21:30),indexes(:,21:30)] = subcarrierSelection(smoothCSI(:,21:30),sc);
+indexes(:,11:20) = indexes(:,11:20)+30;
+indexes(:,21:30) = indexes(:,21:30)+60;
 %DWT for obtaining detailed and approx coefficients
 smoothSensitive = smoothCSI(:,indexes);  
-for currentsc=1:sc
+for currentsc=1:3*sc
     [c,l] = wavedec(smoothSensitive(:,currentsc),4,'db2');
     approx = appcoef(c,l,'db2');
     [cd1,cd2,cd3,cd4] = detcoef(c,l,[1 2 3 4]);
